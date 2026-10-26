@@ -1,42 +1,39 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "CXUI.generated.h"
 
-/**
- *  Simple Vehicle HUD class
- *  Displays the current speed and gear.
- *  Widget setup is handled in a Blueprint subclass.
- */
 UCLASS(abstract)
 class CX_API UCXUI : public UUserWidget
 {
 	GENERATED_BODY()
-	
-protected:
 
-	/** Controls the display of speed in Km/h or MPH */
+protected:
+	// 속도를 MPH 또는 KM/H로 표시할지 설정
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Vehicle)
 	bool bIsMPH = false;
 
 public:
-
-	/** Called to update the speed display */
+	// 속도 표시 갱신
 	void UpdateSpeed(float NewSpeed);
 
-	/** Called to update the gear display */
+	// 기어 표시 갱신
 	void UpdateGear(int32 NewGear);
 
-protected:
+	// 코인 표시 갱신
+	void UpdateCoins(int32 NewCoins);
 
-	/** Implemented in Blueprint to display the new speed */
+protected:
+	// 블루프린트에서 속도 표시 구현
 	UFUNCTION(BlueprintImplementableEvent, Category = Vehicle)
 	void OnSpeedUpdate(float NewSpeed);
 
-	/** Implemented in Blueprint to display the new gear */
+	// 블루프린트에서 기어 표시 구현
 	UFUNCTION(BlueprintImplementableEvent, Category = Vehicle)
 	void OnGearUpdate(int32 NewGear);
+
+	// 블루프린트에서 코인 표시 구현
+	UFUNCTION(BlueprintImplementableEvent, Category = Vehicle)
+	void OnCoinsUpdate(int32 NewCoins);
 };

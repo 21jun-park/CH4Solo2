@@ -18,7 +18,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogTemplateVehicle, Log, All);
  *  Vehicle Pawn class
  *  Handles common functionality for all vehicle types,
  *  including input handling and camera management.
- *  
+ *
  *  Specific vehicle configurations are handled in subclasses.
  */
 UCLASS(abstract)
@@ -75,8 +75,16 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	UInputAction* ResetVehicleAction;
 
+	// 공격 입력
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	UInputAction* AttackAction;
+
 	/** Keeps track of which camera is active */
 	bool bFrontCameraActive = false;
+
+	// 기본 엔진 토크와 적용된 속도 보너스
+	float BaseEngineTorque = 0.0f;
+	float AppliedSpeedBonus = -1.0f;
 
 public:
 	ACXPawn();
@@ -94,6 +102,8 @@ public:
 	// End Actor interface
 
 protected:
+
+	virtual void BeginPlay() override;
 
 	/** Handles steering input */
 	void Steering(const FInputActionValue& Value);
@@ -122,9 +132,15 @@ protected:
 	void ResetVehicle(const FInputActionValue& Value);
 
 	/** Called when the brake lights are turned on or off */
-	UFUNCTION(BlueprintImplementableEvent, Category="Vehicle")
+	UFUNCTION(BlueprintImplementableEvent, Category = "Vehicle")
 	void BrakeLights(bool bBraking);
 
+	// 공격 입력 처리
+	void Attack(const FInputActionValue& Value);
+
+	// 서버에 공격 판정 요청
+	UFUNCTION(Server, Reliable)
+	void ServerAttack();
 public:
 	/** Returns the front spring arm subobject */
 	FORCEINLINE USpringArmComponent* GetFrontSpringArm() const { return FrontSpringArm; }
