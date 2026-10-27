@@ -59,6 +59,10 @@ public:
 
 	virtual void Tick(float Delta) override;
 
+	// 승패 결과를 UI에 표시
+	UFUNCTION(Client, Reliable)
+	void UpdateResultUI(const FString& Result);
+
 	// End Actor interface
 
 	// Begin PlayerController interface

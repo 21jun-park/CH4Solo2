@@ -24,6 +24,28 @@ public:
 	// 코인 표시 갱신
 	void UpdateCoins(int32 NewCoins);
 
+	// 추가 속도 보너스 표시 갱신
+	void UpdateSpeedBonus(float NewBonus);
+
+	// 남은 시간 표시 갱신
+	void UpdateRemainingTime(float NewTime);
+
+	// 승패 결과 표시 갱신
+	void UpdateResult(const FString& NewResult);
+
+protected:
+	// 블루프린트에서 추가 속도 보너스 표시 구현
+	UFUNCTION(BlueprintImplementableEvent, Category = Vehicle)
+	void OnSpeedBonusUpdate(float NewBonus);
+
+	// 블루프린트에서 남은 시간 표시 구현
+	UFUNCTION(BlueprintImplementableEvent, Category = Vehicle)
+	void OnRemainingTimeUpdate(float NewTime);
+
+	// 블루프린트에서 승패 결과 표시 구현
+	UFUNCTION(BlueprintImplementableEvent, Category = Vehicle)
+	void OnResultUpdate(const FString& NewResult);
+
 protected:
 	// 블루프린트에서 속도 표시 구현
 	UFUNCTION(BlueprintImplementableEvent, Category = Vehicle)

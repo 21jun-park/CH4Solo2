@@ -24,3 +24,21 @@ void UCXUI::UpdateCoins(int32 NewCoins)
 	// 코인 수를 블루프린트에 전달
 	OnCoinsUpdate(NewCoins);
 }
+
+// 추가 속도 보너스 표시 갱신
+void UCXUI::UpdateSpeedBonus(float NewBonus)
+{
+	OnSpeedBonusUpdate(NewBonus);
+}
+
+// 남은 시간 표시 갱신
+void UCXUI::UpdateRemainingTime(float NewTime)
+{
+	OnRemainingTimeUpdate(NewTime);
+}
+
+// 승패 결과 표시 갱신
+void UCXUI::UpdateResult(const FString& NewResult)
+{
+	OnResultUpdate(NewResult);
+}

@@ -141,6 +141,13 @@ protected:
 	// 서버에 공격 판정 요청
 	UFUNCTION(Server, Reliable)
 	void ServerAttack();
+	// 마지막 공격 시간 (서버 기준)
+	float LastAttackTime = -1.0f;
+
+	bool IsGamePlaying() const;
+// 공격 쿨타임
+UPROPERTY(EditDefaultsOnly, Category = "Combat")
+float AttackCooldown = 1.0f;
 public:
 	/** Returns the front spring arm subobject */
 	FORCEINLINE USpringArmComponent* GetFrontSpringArm() const { return FrontSpringArm; }

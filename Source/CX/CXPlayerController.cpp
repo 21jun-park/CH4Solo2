@@ -7,6 +7,7 @@
 #include "CXPlayerState.h"
 #include "EnhancedInputSubsystems.h"
 #include "ChaosWheeledVehicleMovementComponent.h"
+#include "CXGameState.h"
 #include "Net/UnrealNetwork.h"
 
 // 게임 시작 시 UI 생성
@@ -77,7 +78,34 @@ void ACXPlayerController::Tick(float Delta)
 			GetPlayerState<ACXPlayerState>())
 		{
 			VehicleUI->UpdateCoins(MyPlayerState->Coins);
+
+			// 추가 속도 보너스 표시
+			VehicleUI->UpdateSpeedBonus(MyPlayerState->BonusMaxSpeed);
+
 		}
+
+		// 남은 시간 표시
+		if (ACXGameState* MyGameState =
+			GetWorld()->GetGameState<ACXGameState>())
+		{
+			VehicleUI->UpdateRemainingTime(MyGameState->RemainingTime);
+		}
+	}
+}
+
+// 승패 결과를 UI에 표시
+void ACXPlayerController::UpdateResultUI_Implementation(const FString& Result)
+{
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("UpdateResultUI: IsValid(VehicleUI) = %d"),
+		IsValid(VehicleUI)
+	);
+
+	if (IsValid(VehicleUI))
+	{
+		VehicleUI->UpdateResult(Result);
 	}
 }
 

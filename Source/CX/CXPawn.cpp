@@ -4,6 +4,7 @@
 #include "CXWheelFront.h"
 #include "CXWheelRear.h"
 #include "CXPlayerState.h"
+#include "CXGameState.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -151,24 +152,47 @@ void ACXPawn::Tick(float Delta)
 
 void ACXPawn::Steering(const FInputActionValue& Value)
 {
-	float SteeringValue = Value.Get<float>();
-	ChaosVehicleMovement->SetSteeringInput(SteeringValue);
+    if (!IsGamePlaying())
+    {
+        ChaosVehicleMovement->SetSteeringInput(0.0f);
+        return;
+    }
+
+    float SteeringValue = Value.Get<float>();
+    ChaosVehicleMovement->SetSteeringInput(SteeringValue);
 }
 
 void ACXPawn::Throttle(const FInputActionValue& Value)
 {
+	if (!IsGamePlaying())
+	{
+		ChaosVehicleMovement->SetThrottleInput(0.0f);
+		return;
+	}
+
 	float ThrottleValue = Value.Get<float>();
 	ChaosVehicleMovement->SetThrottleInput(ThrottleValue);
 }
 
 void ACXPawn::Brake(const FInputActionValue& Value)
 {
+	if (!IsGamePlaying())
+	{
+		ChaosVehicleMovement->SetBrakeInput(0.0f);
+		return;
+	}
+
 	float BreakValue = Value.Get<float>();
 	ChaosVehicleMovement->SetBrakeInput(BreakValue);
 }
 
 void ACXPawn::StartBrake(const FInputActionValue& Value)
 {
+	if (!IsGamePlaying())
+	{
+		return;
+	}
+
 	BrakeLights(true);
 }
 
@@ -180,6 +204,12 @@ void ACXPawn::StopBrake(const FInputActionValue& Value)
 
 void ACXPawn::StartHandbrake(const FInputActionValue& Value)
 {
+	// 게임 진행 중이 아니면 핸드브레이크 불가
+	if (!IsGamePlaying())
+	{
+		return;
+	}
+
 	ChaosVehicleMovement->SetHandbrakeInput(true);
 	BrakeLights(true);
 }
@@ -206,6 +236,12 @@ void ACXPawn::ToggleCamera(const FInputActionValue& Value)
 
 void ACXPawn::ResetVehicle(const FInputActionValue& Value)
 {
+	// 게임 진행 중이 아니면 리셋 불가
+	if (!IsGamePlaying())
+	{
+		return;
+	}
+
 	FVector ResetLocation = GetActorLocation() + FVector(0.0f, 0.0f, 50.0f);
 
 	FRotator ResetRotation = GetActorRotation();
@@ -224,6 +260,10 @@ void ACXPawn::ResetVehicle(const FInputActionValue& Value)
 
 void ACXPawn::Attack(const FInputActionValue& Value)
 {
+	if (!IsGamePlaying())
+	{
+		return;
+	}
 	UE_LOG(LogTemplateVehicle, Warning, TEXT("Attack 입력 감지"));
 	ServerAttack();
 }
@@ -231,6 +271,20 @@ void ACXPawn::Attack(const FInputActionValue& Value)
 // 서버에서 공격 처리
 void ACXPawn::ServerAttack_Implementation()
 {
+	if (!IsGamePlaying())
+	{
+		return;
+	}
+	// 서버에서 공격 간격 검사
+	const float CurrentTime = GetWorld()->GetTimeSeconds();
+
+	if (CurrentTime - LastAttackTime < AttackCooldown)
+	{
+		return;
+	}
+
+	LastAttackTime = CurrentTime;
+
 	UE_LOG(LogTemplateVehicle, Warning, TEXT("ServerAttack 실행됨"));
 
 	// 차량 앞쪽에서 탐지 시작
@@ -287,15 +341,27 @@ void ACXPawn::ServerAttack_Implementation()
 			// 양쪽 PlayerState 확인
 			if (IsValid(AttackerState) && IsValid(TargetState))
 			{
-				UE_LOG(
-					LogTemplateVehicle,
-					Warning,
-					TEXT("PlayerState"));
-				
+				// 상대가 가진 코인 중 최대 5개를 가져옴
+				const int32 StealAmount = FMath::Min(TargetState->Coins, 5);
+
+				if (StealAmount > 0)
+				{
+					TargetState->AddCoins(-StealAmount);
+					AttackerState->AddCoins(StealAmount);
+				}
 			}
 		}
 	}
 }
 
+// 현재 게임이 진행 중인지 확인
+bool ACXPawn::IsGamePlaying() const
+{
+	const ACXGameState* CXState =
+		GetWorld() ? GetWorld()->GetGameState<ACXGameState>() : nullptr;
+
+	return CXState &&
+		CXState->GamePhase == ECXGamePhase::Playing;
+}
 #undef LOCTEXT_NAMESPACE
 
