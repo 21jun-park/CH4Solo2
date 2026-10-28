@@ -1,26 +1,46 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "TimerManager.h"
 #include "CXMine.generated.h"
+
+class USphereComponent;
 
 UCLASS()
 class CX_API ACXMine : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
-	// Sets default values for this actor's properties
+
+public:
 	ACXMine();
 
 protected:
-	// Called when the game starts or when spawned
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mine")
+	TObjectPtr<USphereComponent> CollisionSphere;
+
+	UFUNCTION()
+	void OnMineOverlap(
+		UPrimitiveComponent* OverlappedComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComponent,
+		int32 OtherBodyIndex,
+		bool bFromSweep,
+		const FHitResult& SweepResult
+	);
+
+	UPROPERTY(EditDefaultsOnly, Category = "Mine")
+	float DisableDuration = 2.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Mine")
+	float MineLifetime = 30.0f;
+
 	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+private:
+	bool bTriggered = false;
 
+	void DestroyMine();
+
+	FTimerHandle MineLifetimeTimerHandle;
 };

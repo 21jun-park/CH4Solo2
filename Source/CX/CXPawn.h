@@ -1,9 +1,9 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "WheeledVehiclePawn.h"
+
+#include "TimerManager.h"
 #include "CXPawn.generated.h"
 
 class UCameraComponent;
@@ -11,6 +11,7 @@ class USpringArmComponent;
 class UInputAction;
 class UChaosWheeledVehicleMovementComponent;
 struct FInputActionValue;
+class ACXMine;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateVehicle, Log, All);
 
@@ -79,6 +80,29 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	UInputAction* AttackAction;
 
+	// 지뢰 설치 입력과 생성할 지뢰 클래스
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mine", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UInputAction> MineAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mine", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<ACXMine> MineClass;
+
+	// 지뢰에 맞았을 때 가속 차단
+	UPROPERTY(Replicated)
+	bool bMineDisabled = false;
+
+	FTimerHandle MineEffectTimerHandle;
+
+	void PlaceMine(const FInputActionValue& Value);
+
+	UFUNCTION(Server, Reliable)
+	void ServerPlaceMine();
+
+	UFUNCTION()
+	void ResetMineEffect();
+
+public:
+	void ApplyMineEffect(float Duration);
 	/** Keeps track of which camera is active */
 	bool bFrontCameraActive = false;
 
@@ -87,6 +111,10 @@ protected:
 	float AppliedSpeedBonus = -1.0f;
 
 public:
+	virtual void GetLifetimeReplicatedProps(
+		TArray<FLifetimeProperty>& OutLifetimeProps
+	) const override;
+
 	ACXPawn();
 
 	// Begin Pawn interface

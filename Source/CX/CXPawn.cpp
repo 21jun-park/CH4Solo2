@@ -1,10 +1,10 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "CXPawn.h"
 #include "CXWheelFront.h"
 #include "CXWheelRear.h"
 #include "CXPlayerState.h"
 #include "CXGameState.h"
+#include "CXMine.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -14,6 +14,8 @@
 #include "ChaosWheeledVehicleMovementComponent.h"
 #include "DrawDebugHelpers.h"
 #include "GameFramework/Actor.h"
+#include "Net/UnrealNetwork.h"
+#include "TimerManager.h"
 
 #define LOCTEXT_NAMESPACE "VehiclePawn"
 
@@ -69,49 +71,67 @@ void ACXPawn::BeginPlay()
 	}
 }
 
-void ACXPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
+void ACXPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+	if (UEnhancedInputComponent* EnhancedInputComponent =
+		Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		// 조향
-		EnhancedInputComponent->BindAction(SteeringAction, ETriggerEvent::Triggered, this, &ACXPawn::Steering);
-		EnhancedInputComponent->BindAction(SteeringAction, ETriggerEvent::Completed, this, &ACXPawn::Steering);
+		EnhancedInputComponent->BindAction(
+			SteeringAction, ETriggerEvent::Triggered, this, &ACXPawn::Steering);
+		EnhancedInputComponent->BindAction(
+			SteeringAction, ETriggerEvent::Completed, this, &ACXPawn::Steering);
 
 		// 가속
-		EnhancedInputComponent->BindAction(ThrottleAction, ETriggerEvent::Triggered, this, &ACXPawn::Throttle);
-		EnhancedInputComponent->BindAction(ThrottleAction, ETriggerEvent::Completed, this, &ACXPawn::Throttle);
+		EnhancedInputComponent->BindAction(
+			ThrottleAction, ETriggerEvent::Triggered, this, &ACXPawn::Throttle);
+		EnhancedInputComponent->BindAction(
+			ThrottleAction, ETriggerEvent::Completed, this, &ACXPawn::Throttle);
 
 		// 브레이크
-		EnhancedInputComponent->BindAction(BrakeAction, ETriggerEvent::Triggered, this, &ACXPawn::Brake);
-		EnhancedInputComponent->BindAction(BrakeAction, ETriggerEvent::Started, this, &ACXPawn::StartBrake);
-		EnhancedInputComponent->BindAction(BrakeAction, ETriggerEvent::Completed, this, &ACXPawn::StopBrake);
+		EnhancedInputComponent->BindAction(
+			BrakeAction, ETriggerEvent::Triggered, this, &ACXPawn::Brake);
+		EnhancedInputComponent->BindAction(
+			BrakeAction, ETriggerEvent::Started, this, &ACXPawn::StartBrake);
+		EnhancedInputComponent->BindAction(
+			BrakeAction, ETriggerEvent::Completed, this, &ACXPawn::StopBrake);
 
 		// 핸드브레이크
-		EnhancedInputComponent->BindAction(HandbrakeAction, ETriggerEvent::Started, this, &ACXPawn::StartHandbrake);
-		EnhancedInputComponent->BindAction(HandbrakeAction, ETriggerEvent::Completed, this, &ACXPawn::StopHandbrake);
+		EnhancedInputComponent->BindAction(
+			HandbrakeAction, ETriggerEvent::Started, this, &ACXPawn::StartHandbrake);
+		EnhancedInputComponent->BindAction(
+			HandbrakeAction, ETriggerEvent::Completed, this, &ACXPawn::StopHandbrake);
 
 		// 주변 둘러보기
-		EnhancedInputComponent->BindAction(LookAroundAction, ETriggerEvent::Triggered, this, &ACXPawn::LookAround);
+		EnhancedInputComponent->BindAction(
+			LookAroundAction, ETriggerEvent::Triggered, this, &ACXPawn::LookAround);
 
 		// 카메라 전환
-		EnhancedInputComponent->BindAction(ToggleCameraAction, ETriggerEvent::Triggered, this, &ACXPawn::ToggleCamera);
+		EnhancedInputComponent->BindAction(
+			ToggleCameraAction, ETriggerEvent::Triggered, this, &ACXPawn::ToggleCamera);
 
 		// 공격
 		EnhancedInputComponent->BindAction(
-			AttackAction,
-			ETriggerEvent::Started,
-			this,
-			&ACXPawn::Attack
-		);
+			AttackAction, ETriggerEvent::Started, this, &ACXPawn::Attack);
+
+		// 지뢰 설치
+		EnhancedInputComponent->BindAction(
+			MineAction, ETriggerEvent::Started, this, &ACXPawn::PlaceMine);
 
 		// 차량 리셋
-		EnhancedInputComponent->BindAction(ResetVehicleAction, ETriggerEvent::Triggered, this, &ACXPawn::ResetVehicle);
+		EnhancedInputComponent->BindAction(
+			ResetVehicleAction, ETriggerEvent::Triggered, this, &ACXPawn::ResetVehicle);
 	}
 	else
 	{
-		UE_LOG(LogTemplateVehicle, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
+		UE_LOG(
+			LogTemplateVehicle,
+			Error,
+			TEXT("'%s' Failed to find an Enhanced Input component!"),
+			*GetNameSafe(this)
+		);
 	}
 }
 
@@ -152,25 +172,26 @@ void ACXPawn::Tick(float Delta)
 
 void ACXPawn::Steering(const FInputActionValue& Value)
 {
-    if (!IsGamePlaying())
-    {
-        ChaosVehicleMovement->SetSteeringInput(0.0f);
-        return;
-    }
+	if (!IsGamePlaying())
+	{
+		ChaosVehicleMovement->SetSteeringInput(0.0f);
+		return;
+	}
 
-    float SteeringValue = Value.Get<float>();
-    ChaosVehicleMovement->SetSteeringInput(SteeringValue);
+	const float SteeringValue = Value.Get<float>();
+	ChaosVehicleMovement->SetSteeringInput(SteeringValue);
 }
 
 void ACXPawn::Throttle(const FInputActionValue& Value)
 {
-	if (!IsGamePlaying())
+	// 게임 진행 중이 아니거나 지뢰 효과를 받으면 가속 차단
+	if (!IsGamePlaying() || bMineDisabled)
 	{
 		ChaosVehicleMovement->SetThrottleInput(0.0f);
 		return;
 	}
 
-	float ThrottleValue = Value.Get<float>();
+	const float ThrottleValue = Value.Get<float>();
 	ChaosVehicleMovement->SetThrottleInput(ThrottleValue);
 }
 
@@ -182,7 +203,7 @@ void ACXPawn::Brake(const FInputActionValue& Value)
 		return;
 	}
 
-	float BreakValue = Value.Get<float>();
+	const float BreakValue = Value.Get<float>();
 	ChaosVehicleMovement->SetBrakeInput(BreakValue);
 }
 
@@ -204,7 +225,6 @@ void ACXPawn::StopBrake(const FInputActionValue& Value)
 
 void ACXPawn::StartHandbrake(const FInputActionValue& Value)
 {
-	// 게임 진행 중이 아니면 핸드브레이크 불가
 	if (!IsGamePlaying())
 	{
 		return;
@@ -222,7 +242,7 @@ void ACXPawn::StopHandbrake(const FInputActionValue& Value)
 
 void ACXPawn::LookAround(const FInputActionValue& Value)
 {
-	float LookValue = Value.Get<float>();
+	const float LookValue = Value.Get<float>();
 	BackSpringArm->AddLocalRotation(FRotator(0.0f, LookValue, 0.0f));
 }
 
@@ -236,7 +256,6 @@ void ACXPawn::ToggleCamera(const FInputActionValue& Value)
 
 void ACXPawn::ResetVehicle(const FInputActionValue& Value)
 {
-	// 게임 진행 중이 아니면 리셋 불가
 	if (!IsGamePlaying())
 	{
 		return;
@@ -264,6 +283,7 @@ void ACXPawn::Attack(const FInputActionValue& Value)
 	{
 		return;
 	}
+
 	UE_LOG(LogTemplateVehicle, Warning, TEXT("Attack 입력 감지"));
 	ServerAttack();
 }
@@ -275,6 +295,7 @@ void ACXPawn::ServerAttack_Implementation()
 	{
 		return;
 	}
+
 	// 서버에서 공격 간격 검사
 	const float CurrentTime = GetWorld()->GetTimeSeconds();
 
@@ -295,7 +316,6 @@ void ACXPawn::ServerAttack_Implementation()
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(this);
 
-	// 전방으로 선을 쏴서 차량 탐지
 	const bool bHit = GetWorld()->LineTraceSingleByChannel(
 		HitResult,
 		Start,
@@ -304,7 +324,6 @@ void ACXPawn::ServerAttack_Implementation()
 		QueryParams
 	);
 
-	// 탐지 결과를 디버그 선으로 표시
 	DrawDebugLine(
 		GetWorld(),
 		Start,
@@ -318,19 +337,15 @@ void ACXPawn::ServerAttack_Implementation()
 
 	if (bHit)
 	{
-		// 맞은 대상이 차량인지 확인
 		ACXPawn* HitPawn = Cast<ACXPawn>(HitResult.GetActor());
 
-		// 상대 차량이고, 자기 차량이 아닐 때만 처리
 		if (IsValid(HitPawn) && HitPawn != this)
 		{
-			// 공격자 PlayerState 가져오기
 			ACXPlayerState* AttackerState =
 				GetController()
 				? GetController()->GetPlayerState<ACXPlayerState>()
 				: nullptr;
 
-			// 상대 차량의 PlayerState 가져오기
 			AController* HitController = HitPawn->GetController();
 
 			ACXPlayerState* TargetState =
@@ -338,10 +353,8 @@ void ACXPawn::ServerAttack_Implementation()
 				? HitController->GetPlayerState<ACXPlayerState>()
 				: nullptr;
 
-			// 양쪽 PlayerState 확인
 			if (IsValid(AttackerState) && IsValid(TargetState))
 			{
-				// 상대가 가진 코인 중 최대 5개를 가져옴
 				const int32 StealAmount = FMath::Min(TargetState->Coins, 5);
 
 				if (StealAmount > 0)
@@ -354,6 +367,71 @@ void ACXPawn::ServerAttack_Implementation()
 	}
 }
 
+// F키 입력 시 지뢰 설치 요청
+void ACXPawn::PlaceMine(const FInputActionValue& Value)
+{
+	if (!IsGamePlaying())
+	{
+		return;
+	}
+
+	ServerPlaceMine();
+}
+
+// 서버에서 차량 뒤에 지뢰 생성
+void ACXPawn::ServerPlaceMine_Implementation()
+{
+	if (!IsGamePlaying() || !IsValid(MineClass))
+	{
+		return;
+	}
+
+	const FVector SpawnLocation =
+		GetActorLocation() - GetActorForwardVector() * 250.0f
+		+ FVector(0.0f, 0.0f, 20.0f);
+
+	const FTransform SpawnTransform(GetActorRotation(), SpawnLocation);
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = this;
+	SpawnParams.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	GetWorld()->SpawnActor<ACXMine>(
+		MineClass,
+		SpawnTransform,
+		SpawnParams
+	);
+}
+
+// 지뢰에 맞았을 때 가속 차단
+void ACXPawn::ApplyMineEffect(float Duration)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	bMineDisabled = true;
+
+	// 기존 효과가 남아 있다면 타이머를 갱신
+	GetWorldTimerManager().ClearTimer(MineEffectTimerHandle);
+	GetWorldTimerManager().SetTimer(
+		MineEffectTimerHandle,
+		this,
+		&ACXPawn::ResetMineEffect,
+		Duration,
+		false
+	);
+}
+
+// 지뢰 효과 종료
+void ACXPawn::ResetMineEffect()
+{
+	bMineDisabled = false;
+}
+
 // 현재 게임이 진행 중인지 확인
 bool ACXPawn::IsGamePlaying() const
 {
@@ -363,5 +441,15 @@ bool ACXPawn::IsGamePlaying() const
 	return CXState &&
 		CXState->GamePhase == ECXGamePhase::Playing;
 }
-#undef LOCTEXT_NAMESPACE
 
+// 지뢰 효과 변수 복제 등록
+void ACXPawn::GetLifetimeReplicatedProps(
+	TArray<FLifetimeProperty>& OutLifetimeProps
+) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ACXPawn, bMineDisabled);
+}
+
+#undef LOCTEXT_NAMESPACE
