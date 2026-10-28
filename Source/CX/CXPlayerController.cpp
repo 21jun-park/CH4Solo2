@@ -116,3 +116,46 @@ void ACXPlayerController::OnPossess(APawn* InPawn)
 
 	VehiclePawn = CastChecked<ACXPawn>(InPawn);
 }
+
+// 서버에서 채팅 메시지를 받아 모든 플레이어에게 전달
+void ACXPlayerController::ServerSendChatMessage_Implementation(
+	const FString& Message)
+{
+	// 빈 메시지는 전송하지 않음
+	if (Message.TrimStartAndEnd().IsEmpty())
+	{
+		return;
+	}
+
+	// 보낸 플레이어 이름 가져오기
+	const FString SenderName = PlayerState
+		? PlayerState->GetPlayerName()
+		: TEXT("Player");
+
+	// 모든 플레이어 컨트롤러에 메시지 전달
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (ACXPlayerController* PC = Cast<ACXPlayerController>(It->Get()))
+		{
+			PC->ClientReceiveChatMessage(SenderName, Message);
+		}
+	}
+}
+
+// 클라이언트에서 채팅 메시지를 받음
+void ACXPlayerController::ClientReceiveChatMessage_Implementation(
+	const FString& SenderName,
+	const FString& Message)
+{
+	// 받은 채팅을 현재 플레이어의 UI에 표시
+	if (IsValid(VehicleUI))
+	{
+		VehicleUI->UpdateChatMessage(SenderName, Message);
+	}
+}
+
+// 블루프린트의 채팅 전송 요청을 서버 RPC로 전달
+void ACXPlayerController::SendChatMessage(const FString& Message)
+{
+	ServerSendChatMessage(Message);
+}

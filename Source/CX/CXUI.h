@@ -33,6 +33,13 @@ public:
 	// 승패 결과 표시 갱신
 	void UpdateResult(const FString& NewResult);
 
+	// 블루프린트에서 채팅 메시지 표시 구현
+	UFUNCTION(BlueprintImplementableEvent, Category = Chat)
+	void OnChatMessageUpdate(const FString& SenderName, const FString& Message);
+
+	// 채팅 메시지 표시 갱신
+	void UpdateChatMessage(const FString& SenderName, const FString& Message);
+
 protected:
 	// 블루프린트에서 추가 속도 보너스 표시 구현
 	UFUNCTION(BlueprintImplementableEvent, Category = Vehicle)

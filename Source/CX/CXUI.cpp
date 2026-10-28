@@ -42,3 +42,11 @@ void UCXUI::UpdateResult(const FString& NewResult)
 {
 	OnResultUpdate(NewResult);
 }
+
+// 채팅 메시지를 블루프린트에 전달
+void UCXUI::UpdateChatMessage(
+	const FString& SenderName,
+	const FString& Message)
+{
+	OnChatMessageUpdate(SenderName, Message);
+}

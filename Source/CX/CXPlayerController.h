@@ -63,6 +63,18 @@ public:
 	UFUNCTION(Client, Reliable)
 	void UpdateResultUI(const FString& Result);
 
+	// 채팅 메시지를 서버로 전송
+	UFUNCTION(Server, Reliable)
+	void ServerSendChatMessage(const FString& Message);
+
+	// 블루프린트에서 채팅 전송을 호출하기 위한 함수
+	UFUNCTION(BlueprintCallable, Category = "Chat")
+	void SendChatMessage(const FString& Message);
+
+	// 서버에서 각 플레이어에게 채팅 메시지 전달
+	UFUNCTION(Client, Reliable)
+	void ClientReceiveChatMessage(const FString& SenderName, const FString& Message);
+
 	// End Actor interface
 
 	// Begin PlayerController interface
